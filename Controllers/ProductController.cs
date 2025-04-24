@@ -1,0 +1,105 @@
+﻿using BackendProject.Dto;
+using BackendProject.Services.ProductServices;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System;
+
+namespace BackendProject.Controllers
+{
+	[Route("api/[controller]")]
+	[ApiController]
+	public class ProductController : ControllerBase
+	{
+		private readonly IProductServices _services;
+		public ProductController(IProductServices services)
+		{
+			_services = services;
+		}
+		[HttpGet]
+		
+		public async Task<IActionResult> GetProduct()
+		{
+			var products=await _services.GetAllProducts();
+			return Ok(products);
+		}
+		[HttpGet("byId/{id}")]
+		
+		public async Task<IActionResult> GetProductById(int id)
+		{
+			var products=await _services.GetProductsById(id);
+			if (products == null)
+			{
+				return BadRequest("There is no product exist in this id");
+			}
+			return Ok(products);
+		}
+		[HttpPost("Admin")]
+		[Authorize(Roles = "Admin")]
+		public async Task<IActionResult> addProduct([FromForm] AddProductDto addproduct,IFormFile image)
+		{
+			if (addproduct == null)
+			{
+				return NotFound("There product is empty");
+			}
+			bool product=await _services.AddProduct(addproduct,image);
+			if (product)
+			{
+				return Ok("Product added successfully");
+			}
+			return BadRequest();
+		}
+		[HttpDelete("{id}/admin")]
+		[Authorize(Roles = "Admin")]
+		public async Task<IActionResult> DeleteProduct(int id)
+		{
+			bool isdelete=await _services.DeleteProduct(id);
+			if (isdelete) 
+			{
+				return Ok("deleted successfully");
+			}
+			return NotFound("there is no product in this given id");
+		}
+		[HttpPut("Edit/{id}/admin")]
+		[Authorize(Roles = "Admin")]
+		public async Task<IActionResult> EditProduct(int id,[FromForm] AddProductDto addproduct, IFormFile image)
+		{
+			if (addProduct == null)
+			{
+				return BadRequest("Invalid product data.");
+			}
+			bool update=await _services.EditProduct(id, addproduct,image);
+			if (!update)
+			{
+				return BadRequest();
+			}
+			return Ok("Product Updated successfully ");
+		}
+		[HttpGet("{search}")]
+		
+		public async Task<IActionResult> SearchProduct(string search)
+		{
+			try
+			{
+				var products= await _services.SearchProduct(search);
+				return Ok(products);
+			}catch (Exception ex)
+			{
+				return StatusCode(500, ex.Message);
+			}
+		}
+		[HttpGet("Paginated")]
+		
+		public async Task<IActionResult> Pagination([FromQuery] int pageNumber = 1, [FromQuery] int pagesize = 10)
+		{
+			try
+			{
+				var products =await _services.PaginatedProduct(pageNumber, pagesize);
+				return Ok(products);
+			}catch (Exception ex)
+			{
+				return StatusCode(500, ex.Message);
+			}
+		}
+	}
+}
